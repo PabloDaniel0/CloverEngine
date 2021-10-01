@@ -49,7 +49,7 @@ bool Search :: checkForStop() {
   return (flag & TERMINATED_SEARCH);
 }
 
-bool printStats = true; /// default true
+bool printStats = false; /// default true
 bool PROBE_ROOT = true; /// default true
 
 int Search :: quiesce(int alpha, int beta, bool useTT) {
@@ -72,7 +72,8 @@ int Search :: quiesce(int alpha, int beta, bool useTT) {
   int bound = NONE;
   uint16_t bestMove = NULLMOVE;
 
-  TT->prefetch(key);
+  if(useTT)
+    TT->prefetch(key);
 
   tt :: Entry entry = {};
 
@@ -80,7 +81,7 @@ int Search :: quiesce(int alpha, int beta, bool useTT) {
 
   /// probe transposition table
 
-  if(TT->probe(key, entry)) {
+  if(useTT && TT->probe(key, entry)) {
     eval = entry.info.eval;
     ttValue = score = entry.value(ply);
     bound = entry.bound();
@@ -145,7 +146,9 @@ int Search :: quiesce(int alpha, int beta, bool useTT) {
   /// store info in transposition table (seems to work)
 
   bound = (best >= beta ? LOWER : (best > alphaOrig ? EXACT : UPPER));
-  TT->save(key, best, 0, ply, bound, bestMove, Stack[ply].eval);
+
+  if(useTT)
+    TT->save(key, best, 0, ply, bound, bestMove, Stack[ply].eval);
 
   return best;
 }
@@ -532,9 +535,10 @@ std::pair <int, uint16_t> Search :: startSearch(Info *_info) {
 
     /// only 1 move legal
 
-    if(PROBE_ROOT && printStats && nrMoves == 1) {
+    if(PROBE_ROOT && nrMoves == 1) {
       waitUntilDone();
-      std::cout << "bestmove " << toString(moves[0]) << std::endl;
+      if(printStats)
+        std::cout << "bestmove " << toString(moves[0]) << std::endl;
       return {0, moves[0]};
     }
 
@@ -580,9 +584,10 @@ std::pair <int, uint16_t> Search :: startSearch(Info *_info) {
       }
 
       for(auto &mv : moves) {
-        if(mv == move && printStats) {
+        if(mv == move) {
           waitUntilDone();
-          std::cout << "bestmove " << toString(move) << std::endl;
+          if(printStats)
+            std::cout << "bestmove " << toString(move) << std::endl;
           return {0, move};
         }
       }

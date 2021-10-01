@@ -3,20 +3,25 @@
 #include <vector>
 #include <thread>
 #include <ctime>
+#include <atomic>
 #include "search.h"
 
-/*struct FenData {
+struct FenData {
   int score;
   std::string fen;
 };
 
-void generateFens(std::atomic <int> &sumFens, int id, int nrFens, std::string path, uint64_t seed) {
+void generateFens(std::atomic <int> &sumFens, int nrFens, std::string path, uint64_t seed) {
   std::ofstream out (path);
   std::mt19937_64 gn(seed);
 
   Info info[1];
   int gameInd = 1, totalFens = 0;
-  double startTime = getTime();
+
+  long long cntNodes[1000], cntGames[1000];
+
+  for(int i = 0; i < 1000; i++)
+    cntNodes[i] = cntGames[i] = 0;
 
   Search *searcher = new Search();
 
@@ -35,7 +40,8 @@ void generateFens(std::atomic <int> &sumFens, int id, int nrFens, std::string pa
     std::vector <FenData> fens;
     double result = 0;
     int ply = 0;
-    //int resignCnt = 0, drawCnt = 0;
+
+    int winCnt = 0, drawCnt = 0;
 
     searcher->_setFen(START_POS_FEN);
 
@@ -43,7 +49,7 @@ void generateFens(std::atomic <int> &sumFens, int id, int nrFens, std::string pa
     searcher->clearKillers();
     searcher->clearStack();
 
-    searcher->TT->initTable(32 * MB);
+    searcher->TT->initTable(4 * MB);
     searcher->TT->resetAge();
 
     while(true) {
@@ -83,20 +89,34 @@ void generateFens(std::atomic <int> &sumFens, int id, int nrFens, std::string pa
         std::pair <int, uint16_t> res = searcher->startSearch(info);
         score = res.first, move = res.second;
 
-        if(abs(score) <= 1500) {
+        if(nrMoves == 1) { /// in this case, engine reports score 0, which might be misleading
+          searcher->_makeMove(move);
+          continue;
+        }
 
-          searcher->flag = 0;
+        searcher->flag = 0;
 
-          if(!inCheck(searcher->board) && searcher->quiesce(-INF, INF, false) == searcher->Stack[0].eval) { /// relatively quiet position
-            data.fen = searcher->board.fen();
-            data.score = score;
-            fens.push_back(data);
-          }
-        } else {
+        /*cntNodes[ply] += searcher->nodes;
+        cntGames[ply]++;*/
 
+        if(!inCheck(searcher->board) && searcher->quiesce(-INF, INF, false) == searcher->Stack[0].eval) { /// relatively quiet position
+          data.fen = searcher->board.fen();
+          data.score = score;
+          fens.push_back(data);
+        }
+
+        winCnt = (abs(score) >= 1000 ? winCnt + 1 : 0);
+        drawCnt = (abs(score) <= 20 ? drawCnt + 1 : 0);
+
+        if(winCnt >= 4) {
           score *= (searcher->board.turn == WHITE ? 1 : -1);
-
           result = (score < 0 ? 0.0 : 1.0);
+
+          break;
+        }
+
+        if(drawCnt >= 12) {
+          result = 0.5;
 
           break;
         }
@@ -121,7 +141,10 @@ void generateFens(std::atomic <int> &sumFens, int id, int nrFens, std::string pa
 
     gameInd++;
   }
-}*/
+
+  /*for(int i = 0; i < 1000; i++)
+    std::cout << (cntGames[i] ? 1.0 * cntNodes[i] / cntGames[i] : 0) << " average nodes for ply " << i << "\n";*/
+}
 
 void generateData(int nrFens, int nrThreads, std::string rootPath) {
   std::string path[100];
@@ -135,7 +158,7 @@ void generateData(int nrFens, int nrThreads, std::string rootPath) {
     std::cout << path[i] << "\n";
   }
 
-  /*std::vector <std::thread> threads(nrThreads);
+  std::vector <std::thread> threads(nrThreads);
   int batch = nrFens / nrThreads, i = 0;
 
   std::cout << batch << "\n";
@@ -147,7 +170,7 @@ void generateData(int nrFens, int nrThreads, std::string rootPath) {
   for(auto &t : threads) {
     std::string pth = path[i];
     std::cout << "Starting thread " << i << std::endl;
-    t = std::thread{ generateFens, std::ref(sumFens), i, batch, pth, rd() };
+    t = std::thread{ generateFens, std::ref(sumFens), batch, pth, rd() };
     i++;
   }
 
@@ -157,6 +180,6 @@ void generateData(int nrFens, int nrThreads, std::string rootPath) {
   }
 
   for(auto &t : threads)
-    t.join();*/
+    t.join();
 }
 

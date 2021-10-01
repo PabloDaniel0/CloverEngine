@@ -104,7 +104,7 @@ class Search {
     bool principalSearcher;
     Board board;
 
-    tt :: HashTable *threadTT;
+    tt :: HashTable *TT;
 
   private:
     std::unique_ptr <std::thread[]> threads;

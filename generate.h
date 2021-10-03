@@ -91,6 +91,7 @@ void generateFens(std::atomic <int> &sumFens, int nrFens, std::string path, uint
 
         if(nrMoves == 1) { /// in this case, engine reports score 0, which might be misleading
           searcher->_makeMove(move);
+          ply++;
           continue;
         }
 

@@ -18,11 +18,6 @@ void generateFens(std::atomic <int> &sumFens, int nrFens, std::string path, uint
   Info info[1];
   int gameInd = 1, totalFens = 0;
 
-  long long cntNodes[1000], cntGames[1000];
-
-  for(int i = 0; i < 1000; i++)
-    cntNodes[i] = cntGames[i] = 0;
-
   Search *searcher = new Search();
 
   info->timeset = false;
@@ -96,9 +91,6 @@ void generateFens(std::atomic <int> &sumFens, int nrFens, std::string path, uint
         }
 
         searcher->flag = 0;
-
-        /*cntNodes[ply] += searcher->nodes;
-        cntGames[ply]++;*/
 
         if(!inCheck(searcher->board) && searcher->quiesce(-INF, INF, false) == searcher->Stack[0].eval) { /// relatively quiet position
           data.fen = searcher->board.fen();
